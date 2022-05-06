@@ -1,0 +1,304 @@
+---
+title: "Final Project"
+author: "Guglielmo Tornesi"
+date: "5/4/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Final Project Data Wrangling Report
+
+```{r, echo=FALSE, warning=FALSE,message=FALSE}
+options(warn=-1)
+library(rvest)
+library(tidyverse)
+library(plyr); library(dplyr)
+library(magick)
+library(jpeg)
+#library(cowplot)
+library(broom)
+library(png)
+```
+### Scraping and dataset creation
+We selected the following url: https://www.basketball-reference.com/leagues/NBA_2022_per_game.html for our data source, which we scraped with the "rvest" library. The dataset contains per game statistics about each player. After reading the html page and its table, we rendered the data as a tibble.
+```{r}
+url <- "https://www.basketball-reference.com/leagues/NBA_2022_per_game.html"
+NBA_table <-
+url %>%
+read_html() %>%
+html_nodes("table") %>%
+html_table(fill = TRUE)
+
+### Saving data as a tibble
+NBA_table <- as_tibble(NBA_table[[1]])
+print(NBA_table)
+```
+
+### Glossary
+Rk -- Rank  
+Pos -- Position  
+Age -- Player's age on February 1 of the season  
+Tm -- Team  
+G -- Games  
+GS -- Games Started  
+MP -- Minutes Played Per Game  
+FG -- Field Goals Per Game  
+FGA -- Field Goal Attempts Per Game  
+FG% -- Field Goal Percentage  
+3P -- 3-Point Field Goals Per Game  
+3PA -- 3-Point Field Goal Attempts Per Game  
+3P% -- 3-Point Field Goal Percentage  
+2P -- 2-Point Field Goals Per Game  
+2PA -- 2-Point Field Goal Attempts Per Game  
+2P% -- 2-Point Field Goal Percentage  
+eFG% -- Effective Field Goal Percentage  
+This statistic adjusts for the fact that a 3-point field goal is worth one more point than a 2-point field goal.  
+FT -- Free Throws Per Game  
+FTA -- Free Throw Attempts Per Game  
+FT% -- Free Throw Percentage  
+ORB -- Offensive Rebounds Per Game  
+DRB -- Defensive Rebounds Per Game  
+TRB -- Total Rebounds Per Game  
+AST -- Assists Per Game  
+STL -- Steals Per Game  
+BLK -- Blocks Per Game  
+TOV -- Turnovers Per Game  
+PF -- Personal Fouls Per Game  
+PTS -- Points Per Game  
+
+### Data cleaning
+
+The cleaning process was mainly based on 3 steps:  
+  
+* Using the glimpse functions to check if any change in the variables names was needed  
+  
+* Converting char data to integer data  
+  
+* Eliminating label lines from the tibble
+
+```{r}
+###Cleaning up data
+glimpse(NBA_table)
+```
+### Final dataset
+```{r}
+### convert char data to integer data
+
+i <- c(4,6:30)
+NBA_table[ , i] <- apply(NBA_table[ , i], 2,function(x) as.numeric(as.character(x)))
+
+### Eliminating label lines
+
+NBA_table <- NBA_table %>% 
+  filter(!grepl('Rk', Rk))
+print(NBA_table)
+```
+### Dataset download
+
+After the cleaning process, we downloaded the file as a csv.
+```{r}
+
+write.table(NBA_table , file = "C:\\Users\\gugli\\OneDrive\\Desktop\\Università\\Master\\Rutgers\\Materiale Accademico Uni\\1st Year\\2nd Semester\\Data Wrangling\\Final Project\\NBA_table.csv")
+```
+
+### Data analysis
+
+First, we analyzed the top 5 scorers in the dataset. Then we created a barplot with the names of the top scorers and their scores. Moreover, we scraped the image of the player with the highest score and inserted it on the player bar.
+```{r}
+### Top 5 scorer
+
+
+image_url <- "https://www.basketball-reference.com/req/202106291/images/players/embiijo01.jpg"
+
+z <- tempfile()
+download.file(image_url,z,mode="wb")
+pic <- readJPEG(z)
+NBA_table$Rank <- rank(-NBA_table$PTS)
+tps <- head(NBA_table[order(NBA_table$Rank),],5) %>% select(Player, PTS) 
+
+
+plot <- ggplot(data=tps, aes(y=PTS, x=Player)) + geom_bar(stat="identity") 
+ggdraw()  +
+  draw_plot(plot) + draw_image(pic,  x = -0.15, y = 0.3, scale = .25)
+```
+
+### Relationship between the amount of points scored and time played
+```{r}
+### Checking the relationship between amount of points scored and time played
+
+NBA_table %>% 
+  ggplot(aes(x=MP,
+      y=PTS)) +
+  geom_point() 
+
+```
+  
+We can observe a clear positive correlation between the number of minutes played per game and the number of points scored. Thus, we can conclude that the longer a player stays in the game, the larger the number of points they will score. 
+  
+### Top teams by points
+  
+Another important aspect of our analysis was showing the total number of points per team. First, we printed the top 5 teams by points and then we plotted the general performance of all the teams.
+```{r}
+
+ddply(NBA_table, .(Tm), summarise, PTS=sum(PTS)) %>% arrange(desc(PTS)) %>% head(n=5)
+
+ddply(NBA_table, .(Tm), summarise, PTS=sum(PTS)) %>% arrange(desc(PTS)) %>%
+  ggplot(aes(x = PTS, 
+             y = Tm,
+             label=PTS)) +
+  geom_point(aes(fill = Tm), 
+             size = 2, 
+             color = 'black', 
+             shape = 21) ### TOT has more top scorer
+```
+  
+According to the chart, TOT leads all the other teams in total points scored, because it has more top scorers than any other team in the dataset. Anyway, TOT is followed by POR and IND.
+
+*(this is a bit obvious, maybe we should look into 3 point attempts to try to explain why teams scored the most points or 3 point percentage, 2 point attempts..etc.)*
+
+### Top scorer by position
+
+Next, we analyzed which player positions(point guard,shooting guard..etc.) resulted in the most points scored. 
+```{r}
+
+aggregate(NBA_table$PTS, by=list(Category=NBA_table$Pos), FUN=sum) %>% arrange(desc(x)) %>% 
+  ggplot( aes(x=Category, 
+              y=x,
+              labels=Category)) + 
+  geom_point(aes(fill = Category), 
+             size = 5, 
+             color = 'black', 
+             shape = 21) +
+  labs(y= "Points", x="Positions")
+```
+  
+After plotting the results, we can state that the top 3 categories are:
+  
+* Shooting guards
+* Point Guards
+* Power Forward  
+
+And given the following image representing the basketball positions it makes sense that shooting guards and point guards are the top 2.  
+
+*(Why? That picture doesn't necessarily show anything)*
+
+```{r}
+
+image_url <- "https://www.rookieroad.com/img/basketball/basketball-positions.png"
+
+z <- tempfile()
+download.file(image_url,z,mode="wb")
+pic <- readPNG(z)
+ggdraw()  +
+  draw_image(pic)
+```
+
+### Number of FT, 3P, 2P by position
+
+After having analyzed the number of points scored by each position, we were interested in discovering what types of shots are taken by each type of player.
+
+```{r}
+
+type_of_throws <-  c("3P%", "FT%", "2P%")
+Throws <-  type_of_throws
+df1 <- ddply(NBA_table, .(Pos), summarise, FT=sum(FT), `3P`=sum(`3P`), `2P`=sum(`2P`))
+  
+df1 <- df1 %>%
+  pivot_longer(!Pos, names_to = "Throws", values_to = "val")  
+  
+df1 %>%
+  ggplot(aes(x = Pos, 
+             y = val,
+             label=Throws)) +
+    geom_histogram(aes(fill = Throws), 
+                   color="#e9ecef",, position = position_dodge(), 
+                   alpha = 0.75, stat = 'identity')
+    
+```
+  
+Here we can see different things. First while 2 pointers and free throws are scored by each type of player, 3 pointers are mainly scored by shooting guards.
+
+### Goal percentages by team
+
+In this part of the analysis, we had to account for missing data in the form of NAs. The reason why we waited till this moment, is because these are the only columns with NAs. We realized that previous analysis worked fine with missing data, and we didn't want to lose observations for previous tasks. 
+
+```{r}
+## Get player stats
+shooting_stats <-  c("3P%", "FT%", "eFG%", "2P%")
+stats <-  shooting_stats
+### Prepare stats data frame for chart
+df <- NBA_table %>% select(Tm, unlist(stats))
+### multiply values by 100 to rescale
+df$'3P%' <- df$'3P%'*100
+df$'FT%' <- df$'FT%'*100
+df$'eFG%' <- df$'eFG%'*100
+df$'2P%' <- df$'2P%'*100
+
+df <- na.omit(df) ### eliminating NAs
+
+df <- ddply(df, .(Tm), summarise, `3P%`=sum(`3P%`), `2P%`=sum(`2P%`), `FT%`=sum(`FT%`), `eFG%`=sum(`eFG%`))
+
+df <- df %>%
+  pivot_longer(!Tm, names_to = "stats", values_to = "val")
+### Create graph
+df %>%
+  ggplot(aes(x = val, 
+             y = Tm,
+             label=stats)) +
+  geom_point(aes(fill = stats), 
+             size = 3, 
+             color = 'black', 
+             shape = 21)  + geom_line(aes(group = Tm), size=0.01)
+
+```
+  
+From the graph we can see that for all the teams free throws are the most used, then mainly for everyone with just some exceptions effective Field Goal Percentage is the second highest value and same thing for 2 point percentage. Finally, as the free throws, the 3 points percentage is the minimum value for everyone.  
+
+
+### Regression
+
+Finally, we performed a linear regression to predict the amount of points based on the throws variable. Obviously the accuracy is high because the amount of points is given by those exact values. So, the summary shows that all the values used for the prediction have a small p-value and high significance for the linear model itself. Moreover, we plotted the regression line for different teams to check if the effect was varying for each one. Anyway, we left just the most interesting one because of a bigger amount of 
+
+/
+
+Finally,we performed a linear regression to analyze the relationship between the total number of points and the different rebounding variables(number of offensive rebounds,number of defensive rebounds). The regression summary shows a low, significant p-value for all the variable coefficients, suggesting that each variable plays an important role in predicting the total number of points per game. Next, we graphed this regression relationship for certain teams.  /
+
+*(Look at the importance of rebounding on the amount of points scored for like the top)*
+
+```{r}
+
+
+pts_fit <- lm(PTS ~ `3P` + `2P` + FT,  NBA_table) 
+summary(pts_fit)
+
+ggplot(filter(NBA_table, Tm=="TOT"), aes(`3P` ,`2P`, FT, color=Tm)) + 
+geom_point()+
+geom_smooth()
+```
+  
+Consequently we did a subgroup regression analysis with grouping by team.
+```{r}
+### Subgroup regression analysis
+team_regressions <- NBA_table %>% group_by(Tm) %>%
+do(tidy(lm(PTS ~ `3P` + `2P` + FT, .), conf.int = TRUE))
+```
+  
+Then we collected the coefficients for the free throws. (we picked randomly, the same analysis could have been done also for the other kind of throws) and then we plotted the estimated coefficients across teams.  
+
+*(Do like three point shots, or rebounds, since they are probably more important than free throws)*
+
+```{r}
+### Collecting coefficients of FT
+coefs <- team_regressions %>% ungroup() %>%
+filter(term == "FT") %>%
+mutate(Tm = reorder(Tm, estimate))
+
+### Plotting estimated coefficients across teams
+ggplot(coefs, aes(x = estimate, y = Tm)) + geom_point() +
+geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
+geom_vline(xintercept = 1, color = "red")
+```
+
