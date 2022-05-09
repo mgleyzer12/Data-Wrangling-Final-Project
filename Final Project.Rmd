@@ -1,6 +1,6 @@
 ---
 title: "Final Project"
-author: "Guglielmo Tornesi"
+author: "Guglielmo Tornesi, Michael Gleyzer"
 date: "5/4/2022"
 output: html_document
 ---
