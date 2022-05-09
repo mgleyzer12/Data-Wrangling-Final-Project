@@ -195,7 +195,9 @@ ggdraw()  +
 
 ### Number of FT, 3P, 2P by position
 
+
 After having analyzed the number of points scored by each position, we were interested in discovering what types of shots are taken by each type of player.
+
 
 ```{r}
 
@@ -218,9 +220,12 @@ df1 %>%
   
 Here we can see different things. First while 2 pointers and free throws are scored by each type of player, 3 pointers are mainly scored by shooting guards.
 
+
 ### Goal percentages by team
 
+
 In this part of the analysis, we had to account for missing data in the form of NAs. The reason why we waited till this moment, is because these are the only columns with NAs. We realized that previous analysis worked fine with missing data, and we didn't want to lose observations for previous tasks. 
+
 
 ```{r}
 ## Get player stats
@@ -257,7 +262,9 @@ From the graph we can see that in all the teams the highest percentage shots are
 
 ### Regression
 
+
 Finally,we performed a linear regression to analyze the relationship between the total number of points and the different rebounding variables(number of offensive rebounds,number of defensive rebounds) and the assists variable. The regression summary shows a low, significant p-value for all the variable coefficients, suggesting that each variable plays an important role in predicting the total number of points per game for each player. Next, we graphed this regression relationship for certain teams.  
+
 
 ```{r}
 
@@ -277,7 +284,11 @@ team_regressions <- NBA_table %>% filter(Tm != 'TOT') %>% group_by(Tm) %>%
 do(tidy(lm(PTS ~ `ORB` + `DRB` + `AST`, .), conf.int = TRUE))
 ```
   
+
+
 Then we collected the coefficients for offensive rebounds. (we picked randomly, the same analysis could have been done also for the other kind of throws) and then we plotted the estimated coefficients across teams. The offensive rebounds coefficient is negative for most teams, which suggests that generally speaking offensive rebounds are negatively correlated with points per game. This makes sense as offensive rebounds occur after missed two point or three point shots. 
+
+
 
 ```{r}
 ### Collecting coefficients of ORB
@@ -290,7 +301,12 @@ ggplot(coefs, aes(x = estimate, y = Tm)) + geom_point() +
 geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
 geom_vline(xintercept = 1, color = "red")
 ```
+
+
+
 Next, we collected the regression coefficients for defensive rebounds. All the regression coefficients clearly demonstrate that defensive rebounds are positively correlated with point scoring.This makes sense as defensive rebounds determine ball possession and the more ball possession a team has the more likely they are to score points.
+
+
 
 
 ```{r}
@@ -304,7 +320,10 @@ ggplot(coefs, aes(x = estimate, y = Tm)) + geom_point() +
 geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
 geom_vline(xintercept = 1, color = "red")
 ```
+
 Finally, we collected regression coefficients for the assist variable. Clearly most teams show a positive correlation between assists and points per game. This is a reasonable result as ball movement is very important in making the attacking team harder to defend, which allows them to score more points. 
+
+
 
 ```{r}
 ### Collecting coefficients of AST
