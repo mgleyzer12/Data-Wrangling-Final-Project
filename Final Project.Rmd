@@ -16,14 +16,14 @@ options(warn=-1)
 library(rvest)
 library(tidyverse)
 library(plyr); library(dplyr)
-library(magick)
+library(magick) 
 library(jpeg)
-#library(cowplot)
+library(cowplot)
 library(broom)
 library(png)
 ```
 ### Scraping and dataset creation
-We selected the following url: https://www.basketball-reference.com/leagues/NBA_2022_per_game.html for our data source, which we scraped with the "rvest" library. The dataset contains per game statistics about each player. After reading the html page and its table, we rendered the data as a tibble.
+We selected the following url: https://www.basketball-reference.com/leagues/NBA_2022_per_game.html for our data source, which we scraped with the "rvest" library. The dataset contains per game statistics about each player. After reading the html page and its table, we rendered the data as a tibble. 
 ```{r}
 url <- "https://www.basketball-reference.com/leagues/NBA_2022_per_game.html"
 NBA_table <-
@@ -101,12 +101,12 @@ print(NBA_table)
 After the cleaning process, we downloaded the file as a csv.
 ```{r}
 
-write.table(NBA_table , file = "C:\\Users\\gugli\\OneDrive\\Desktop\\Università\\Master\\Rutgers\\Materiale Accademico Uni\\1st Year\\2nd Semester\\Data Wrangling\\Final Project\\NBA_table.csv")
+write.table(NBA_table , file = 'NBA_table.csv')
 ```
 
 ### Data analysis
 
-First, we analyzed the top 5 scorers in the dataset. Then we created a barplot with the names of the top scorers and their scores. Moreover, we scraped the image of the player with the highest score and inserted it on the player bar.
+First, we analyzed the top 5 scorers in the dataset. Then we created a barplot with the names of the top scorers and their scores. Moreover, we scraped the image of the player with the highest score and inserted it on his player bar.
 ```{r}
 ### Top 5 scorer
 
@@ -140,12 +140,12 @@ We can observe a clear positive correlation between the number of minutes played
   
 ### Top teams by points
   
-Another important aspect of our analysis was showing the total number of points per team. First, we printed the top 5 teams by points and then we plotted the general performance of all the teams.
+Another important aspect of our analysis was showing the total number of points per team. First, we printed the top 5 teams by total points per game(ppg summed for all the players) and then we plotted the general performance of all the teams.
 ```{r}
 
-ddply(NBA_table, .(Tm), summarise, PTS=sum(PTS)) %>% arrange(desc(PTS)) %>% head(n=5)
+ddply(NBA_table, .(Tm), summarise, PTS=sum(PTS)) %>% filter(Tm != 'TOT') %>% arrange(desc(PTS)) %>% head(n=6)
 
-ddply(NBA_table, .(Tm), summarise, PTS=sum(PTS)) %>% arrange(desc(PTS)) %>%
+ddply(NBA_table, .(Tm), summarise, PTS=sum(PTS)) %>% filter(Tm != 'TOT') %>% arrange(desc(PTS)) %>%
   ggplot(aes(x = PTS, 
              y = Tm,
              label=PTS)) +
@@ -155,9 +155,7 @@ ddply(NBA_table, .(Tm), summarise, PTS=sum(PTS)) %>% arrange(desc(PTS)) %>%
              shape = 21) ### TOT has more top scorer
 ```
   
-According to the chart, TOT leads all the other teams in total points scored, because it has more top scorers than any other team in the dataset. Anyway, TOT is followed by POR and IND.
-
-*(this is a bit obvious, maybe we should look into 3 point attempts to try to explain why teams scored the most points or 3 point percentage, 2 point attempts..etc.)*
+According to the chart, POR(Portland Trail Blazers) leads all the other teams in total points scored, because it has more top scorers than any other team in the dataset. POR is followed by IND(The Indiana Pacers) and OKC(the Oklahoma city thunder) as the next two teams with the highest total points scored.
 
 ### Top scorer by position
 
@@ -181,9 +179,8 @@ After plotting the results, we can state that the top 3 categories are:
 * Point Guards
 * Power Forward  
 
-And given the following image representing the basketball positions it makes sense that shooting guards and point guards are the top 2.  
+It makes sense that shooting guards and point guards are the top two scoring positions , because they are most involved in the offensive aspect of the game.  
 
-*(Why? That picture doesn't necessarily show anything)*
 
 ```{r}
 
@@ -241,7 +238,7 @@ df <- na.omit(df) ### eliminating NAs
 
 df <- ddply(df, .(Tm), summarise, `3P%`=sum(`3P%`), `2P%`=sum(`2P%`), `FT%`=sum(`FT%`), `eFG%`=sum(`eFG%`))
 
-df <- df %>%
+df <- df %>% filter(Tm != 'TOT') %>%
   pivot_longer(!Tm, names_to = "stats", values_to = "val")
 ### Create graph
 df %>%
@@ -255,26 +252,20 @@ df %>%
 
 ```
   
-From the graph we can see that for all the teams free throws are the most used, then mainly for everyone with just some exceptions effective Field Goal Percentage is the second highest value and same thing for 2 point percentage. Finally, as the free throws, the 3 points percentage is the minimum value for everyone.  
+From the graph we can see that in all the teams the highest percentage shots are free throws.The next highest percentage statistics are field goal percentage and 2 point percentage. Finally, given that the 3 pointer is the hardest shot in basketball, the 3 point percentage is the lowest for all the teams. 
 
 
 ### Regression
 
-Finally, we performed a linear regression to predict the amount of points based on the throws variable. Obviously the accuracy is high because the amount of points is given by those exact values. So, the summary shows that all the values used for the prediction have a small p-value and high significance for the linear model itself. Moreover, we plotted the regression line for different teams to check if the effect was varying for each one. Anyway, we left just the most interesting one because of a bigger amount of 
-
-/
-
-Finally,we performed a linear regression to analyze the relationship between the total number of points and the different rebounding variables(number of offensive rebounds,number of defensive rebounds). The regression summary shows a low, significant p-value for all the variable coefficients, suggesting that each variable plays an important role in predicting the total number of points per game. Next, we graphed this regression relationship for certain teams.  /
-
-*(Look at the importance of rebounding on the amount of points scored for like the top)*
+Finally,we performed a linear regression to analyze the relationship between the total number of points and the different rebounding variables(number of offensive rebounds,number of defensive rebounds) and the assists variable. The regression summary shows a low, significant p-value for all the variable coefficients, suggesting that each variable plays an important role in predicting the total number of points per game for each player. Next, we graphed this regression relationship for certain teams.  
 
 ```{r}
 
 
-pts_fit <- lm(PTS ~ `3P` + `2P` + FT,  NBA_table) 
+pts_fit <- lm(PTS ~ `ORB` + `DRB` + `AST` ,  NBA_table) 
 summary(pts_fit)
 
-ggplot(filter(NBA_table, Tm=="TOT"), aes(`3P` ,`2P`, FT, color=Tm)) + 
+ggplot(filter(NBA_table, Tm=="POR"), aes(`ORB` ,`DRB`, color=Tm)) + 
 geom_point()+
 geom_smooth()
 ```
@@ -282,18 +273,43 @@ geom_smooth()
 Consequently we did a subgroup regression analysis with grouping by team.
 ```{r}
 ### Subgroup regression analysis
-team_regressions <- NBA_table %>% group_by(Tm) %>%
-do(tidy(lm(PTS ~ `3P` + `2P` + FT, .), conf.int = TRUE))
+team_regressions <- NBA_table %>% filter(Tm != 'TOT') %>% group_by(Tm) %>% 
+do(tidy(lm(PTS ~ `ORB` + `DRB` + `AST`, .), conf.int = TRUE))
 ```
   
-Then we collected the coefficients for the free throws. (we picked randomly, the same analysis could have been done also for the other kind of throws) and then we plotted the estimated coefficients across teams.  
-
-*(Do like three point shots, or rebounds, since they are probably more important than free throws)*
+Then we collected the coefficients for offensive rebounds. (we picked randomly, the same analysis could have been done also for the other kind of throws) and then we plotted the estimated coefficients across teams. The offensive rebounds coefficient is negative for most teams, which suggests that generally speaking offensive rebounds are negatively correlated with points per game. This makes sense as offensive rebounds occur after missed two point or three point shots. 
 
 ```{r}
-### Collecting coefficients of FT
-coefs <- team_regressions %>% ungroup() %>%
-filter(term == "FT") %>%
+### Collecting coefficients of ORB
+coefs <- team_regressions %>% ungroup() %>% filter(Tm != 'TOT') %>%
+filter(term == "ORB") %>%
+mutate(Tm = reorder(Tm, estimate))
+
+### Plotting estimated coefficients across teams
+ggplot(coefs, aes(x = estimate, y = Tm)) + geom_point() +
+geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
+geom_vline(xintercept = 1, color = "red")
+```
+Next, we collected the regression coefficients for defensive rebounds. All the regression coefficients clearly demonstrate that defensive rebounds are positively correlated with point scoring.This makes sense as defensive rebounds determine ball possession and the more ball possession a team has the more likely they are to score points.
+
+
+```{r}
+### Collecting coefficients of DRB
+coefs <- team_regressions %>% ungroup() %>% filter(Tm != 'TOT') %>%
+filter(term == "DRB") %>%
+mutate(Tm = reorder(Tm, estimate))
+
+### Plotting estimated coefficients across teams
+ggplot(coefs, aes(x = estimate, y = Tm)) + geom_point() +
+geom_errorbarh(aes(xmin = conf.low, xmax = conf.high)) +
+geom_vline(xintercept = 1, color = "red")
+```
+Finally, we collected regression coefficients for the assist variable. Clearly most teams show a positive correlation between assists and points per game. This is a reasonable result as ball movement is very important in making the attacking team harder to defend, which allows them to score more points. 
+
+```{r}
+### Collecting coefficients of AST
+coefs <- team_regressions %>% ungroup() %>% filter(Tm != 'TOT') %>%
+filter(term == "AST") %>%
 mutate(Tm = reorder(Tm, estimate))
 
 ### Plotting estimated coefficients across teams
